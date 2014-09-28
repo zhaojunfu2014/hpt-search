@@ -3,6 +3,7 @@ package com.hpt.search.cluster.job;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ResourceBundle;
@@ -31,6 +32,7 @@ public class PubJob extends TimerTask{
 	private String logPub = null;
 	private String logPubTodo = null;
 	private String logPubArchiver = null;
+	private String logPubError = null;
 	protected static ResourceBundle bundle = null;
 	
 	
@@ -50,6 +52,7 @@ public class PubJob extends TimerTask{
 		logPub = logbase+SearchGlobal.pathSeparator+SearchGlobal.logPub;
 		logPubTodo = logPub+SearchGlobal.pathSeparator+SearchGlobal.logTodo;
 		logPubArchiver = logPub+SearchGlobal.pathSeparator+SearchGlobal.logArchiver;
+		logPubError = logPub+SearchGlobal.pathSeparator+SearchGlobal.logError;
 	}
 	private void moveFileToArchiver(File[] pubTodos) {
 		for(File f:pubTodos){
@@ -57,44 +60,63 @@ public class PubJob extends TimerTask{
 			FileUtil.cutGeneralFile(logPubTodo+SearchGlobal.pathSeparator+filename, logPubArchiver);
 		}
 	}
+	private void copyFileToError(File errorFile,String host,int port) {
+		String filename=errorFile.getName();
+		//将发布错误的日志记录到错误文件夹中,格式:ip_port-time-class.log
+		try {
+			FileInputStream input = new FileInputStream(new File(logPubTodo+SearchGlobal.pathSeparator+filename));
+			File of =new File(logPubError+SearchGlobal.pathSeparator+host+"_"+port+"-"+filename);
+			if(!of.getParentFile().exists()){
+				of.getParentFile().mkdirs();
+			}
+			FileOutputStream output = new FileOutputStream(of);
+			IOUtils.copy(input, output);
+			output.close();
+			input.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+	}
 	@Override
 	public synchronized void run() {
 		File pubTodoDir = new File(logPubTodo);
 		File[] pubTodos = pubTodoDir.listFiles();
+		log.debug(pubTodos.length+" logs");
 		if(pubTodos == null || pubTodos.length==0){
 			return;
 		}
 		String[] groups = group.split(",");
 		String host = null;
 		String portstr = null;
-		int port;
+		int port = 0;
 		String filename = null;
 		String data = null;
 		
 		for(String group:groups){
-			try{
-				for(File f:pubTodos){
-					host = group.split(":")[0];
-					portstr = group.split(":")[1];
-					port = Integer.parseInt(portstr);
-					filename = f.getName();
-					try {
-						InputStream ips = new FileInputStream(f);
-						data = IOUtils.toString(ips);
-						ips.close();
-					} catch (FileNotFoundException e) {
-						log.error(e,e);
-					} catch (IOException e) {
-						log.error(e,e);
-					}
+			int index = 0;
+			for(File f:pubTodos){
+				host = group.split(":")[0];
+				portstr = group.split(":")[1];
+				port = Integer.parseInt(portstr);
+				filename = f.getName();
+				try {
+					InputStream ips = new FileInputStream(f);
+					data = IOUtils.toString(ips);
+					ips.close();
 					Client.send2Server(host, port, filename, data);
+				} catch (Exception e) {
+					log.error(e,e);
+					log.debug("copy this file to error dir");
+					copyFileToError(pubTodos[index], host, port);
 				}
-			}catch (Exception e) {
-				log.error(e,e);
+				index++;
 			}
 		}
 		moveFileToArchiver(pubTodos);
-		
+		log.debug(pubTodos.length+" logs finished");
 	}
 	
 }

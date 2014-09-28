@@ -1,8 +1,13 @@
 package com.hpt.search.service.impl;
 
+import java.io.IOException;
+
+import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.search.Filter;
+import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Sort;
 
+import com.hpt.search.pojo.GroupResult;
 import com.hpt.search.pojo.SearchResult;
 import com.hpt.search.service.SearchService;
 
@@ -83,5 +88,14 @@ public abstract class BaseSearchService implements SearchService {
 				false, false, page, pageSize);
 
 		return searchResult;
+	}
+	@Override
+	public IndexSearcher createIndexSearch() throws CorruptIndexException, IOException{
+		return null;
+	}
+	@Override
+	public <T> GroupResult group(Class<T> clazz,String keywords, String groupField,
+			String valueField, int grouplimit) throws Exception {
+		return null;
 	}
 }

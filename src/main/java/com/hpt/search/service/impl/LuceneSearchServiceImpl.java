@@ -3,7 +3,9 @@ package com.hpt.search.service.impl;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.ResourceBundle;
 
 import org.apache.commons.beanutils.BeanUtils;
@@ -26,6 +28,9 @@ import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.TopFieldCollector;
 import org.apache.lucene.search.TopScoreDocCollector;
+import org.apache.lucene.search.grouping.GroupDocs;
+import org.apache.lucene.search.grouping.GroupingSearch;
+import org.apache.lucene.search.grouping.TopGroups;
 import org.apache.lucene.search.highlight.Fragmenter;
 import org.apache.lucene.search.highlight.Highlighter;
 import org.apache.lucene.search.highlight.QueryScorer;
@@ -35,6 +40,7 @@ import org.apache.lucene.search.highlight.SimpleSpanFragmenter;
 import com.hpt.search.annotation.SearchColum;
 import com.hpt.search.annotation.SearchEntity;
 import com.hpt.search.common.SearchGlobal;
+import com.hpt.search.pojo.GroupResult;
 import com.hpt.search.pojo.SearchResult;
 import com.hpt.search.util.LuceneUtils;
 /**
@@ -49,8 +55,8 @@ public class LuceneSearchServiceImpl extends BaseSearchService{
 	private static final Logger log= Logger.getLogger(LuceneSearchServiceImpl.class);
 	protected static ResourceBundle bundle = null;
 	protected IndexSearcher indexSearcher = null;
+	protected IndexWriter indexWriter = null;
 	protected SimpleHTMLFormatter formatter = null;
-	protected QueryScorer scorer=null;
 	//是否打开高亮功能
 	protected boolean highLight = false;
 	protected String highLightPre = "";
@@ -73,13 +79,28 @@ public class LuceneSearchServiceImpl extends BaseSearchService{
 			highLight = true;
 		}
 	}
-	
-	
-	@SuppressWarnings("unused")
+	@Override
+	public <T> int createOrUpdateIndexBatch(List<T> t) throws Exception {
+		for(T tt:t){
+			createOrUpdateIndex(tt,true);
+		}
+		flushIndexWriter();
+		return t.size();
+	}
+
 	@Override
 	public <T> int createOrUpdateIndex(T t) throws Exception {
+		return createOrUpdateIndex(t,false);
+	}
+	
+	public <T> int createOrUpdateIndex(T t,boolean batch) throws Exception {
 		//操作增，删,改索引库的
-		IndexWriter writer = LuceneUtils.createIndexWriter(OpenMode.CREATE_OR_APPEND);
+		IndexWriter writer = null;
+		if(batch){
+			writer = createIndexWriter(OpenMode.CREATE_OR_APPEND);
+		}else{
+			writer =LuceneUtils.createIndexWriter(OpenMode.CREATE_OR_APPEND);
+		}
 		//进行写入文档
 		Document doc = new Document();
 		java.lang.reflect.Field[] fields = t.getClass().getDeclaredFields();
@@ -135,10 +156,15 @@ public class LuceneSearchServiceImpl extends BaseSearchService{
 			//新增
 			writer.addDocument(doc);
 		}
-		// 释放资源
-		writer.close();
+		if(!batch){
+			// 释放资源
+			writer.close();
+		}
+		flushIndexSearch();
 		return 1;
 	}
+
+	
 
 	@Override
 	public <T> int deleteIndex(T t) throws Exception {
@@ -152,6 +178,7 @@ public class LuceneSearchServiceImpl extends BaseSearchService{
 		writer.deleteDocuments(new Term(LuceneUtils.getClassKey(t, idField), value));
 		// 释放资源
 		writer.close();
+		flushIndexSearch();
 		return 1;
 	}
 
@@ -159,11 +186,12 @@ public class LuceneSearchServiceImpl extends BaseSearchService{
 	public <T> SearchResult<T> findSearchResult(Class<T> clazz, String keywords,
 			Filter filter,Sort sort, boolean doDocScores, boolean doMaxScore,
 			int page, int pageSize) throws CorruptIndexException, IOException, ParseException {
+		long starttime = System.currentTimeMillis();
 		SearchEntity se=clazz.getAnnotation(SearchEntity.class);
 		String[] fs = se.searchFields();
-		IndexSearcher searcher = getIndexSearch();
+		IndexSearcher searcher = createIndexSearch();
 		Query query = LuceneUtils.createQuery(fs, keywords);
-		scorer=new QueryScorer(query); 
+		QueryScorer scorer=new QueryScorer(query); 
 		//存放结果
 		SearchResult<T> searchResult = new SearchResult<T>();
 		int pageLimit = Integer.MAX_VALUE;
@@ -176,32 +204,57 @@ public class LuceneSearchServiceImpl extends BaseSearchService{
 				results = searcher.search(query, filter, pageLimit, sort, doDocScores, doMaxScore);
 			}
 			//封装数据
-			wrapData(searcher,results,searchResult,clazz);
+			wrapData(scorer,searcher,results,searchResult,clazz);
 		}else{
 			//分页
 			TopDocs tds = null;
 			if(sort==null){
-				TopScoreDocCollector results = TopScoreDocCollector.create(page*pageSize, doDocScores);
+				TopScoreDocCollector results = TopScoreDocCollector.create(page*pageSize, false);
 				searcher.search(query, filter, results);
 				tds = results.topDocs((page-1)*pageSize, pageSize);
 			}else{
-				TopFieldCollector results = TopFieldCollector.create(sort, page*pageSize, false, doDocScores, doMaxScore, false);
+				TopFieldCollector results = TopFieldCollector.create(sort, page*pageSize, false, false, false, false);
 				searcher.search(query, filter, results);
 				tds = results.topDocs((page-1)*pageSize, pageSize);
 			}
 			//封装数据
-			wrapData(searcher,tds,searchResult,clazz);
+			wrapData(scorer,searcher,tds,searchResult,clazz);
 		}
+		long endtime = System.currentTimeMillis();
+		//耗时
+		searchResult.setTime(endtime-starttime);
 		return searchResult;
 	}
-
-	protected IndexSearcher getIndexSearch() throws CorruptIndexException,
-			IOException {
-		if(indexSearcher==null){
-			indexSearcher = LuceneUtils.createIndexSearcher();
-		}
-		return indexSearcher;
+	@Override
+	public <T> GroupResult group(Class<T> clazz,String keywords,String groupField, String valueField,
+			int grouplimit) throws Exception {
+		long st = System.currentTimeMillis();
+		SearchEntity se = clazz.getAnnotation(com.hpt.search.annotation.SearchEntity.class);
+		String[] queryArr = se.searchFields();
+		IndexSearcher searcher = createIndexSearch();
+		GroupingSearch  gSearch=new GroupingSearch(groupField);
+		Query q=LuceneUtils.createQuery( queryArr, keywords);
+		TopGroups t=gSearch.search(searcher, q, 0, grouplimit);//设置返回数据
+		GroupDocs[] g=t.groups;//获取分组总数  
+		GroupResult result = new GroupResult();
+		result.setTotalHitCount(t.totalHitCount);
+		result.setDistinctCount(g.length);
+		Map<String,Long> countMap =  new HashMap<String,Long>();
+		Map<String,Object> valueMap= new HashMap<String,Object>(); 
+		 for(int i=0;i<g.length;i++){  
+             ScoreDoc []sd=g[i].scoreDocs;  
+             String gfv = searcher.doc(sd[0].doc).get(groupField);  
+             String vfv = searcher.doc(sd[0].doc).get(valueField);  
+             valueMap.put(gfv, vfv);
+             countMap.put(gfv, new Long(g[i].totalHits));
+		 }  
+		 long et = System.currentTimeMillis();
+		 result.setCountMap(countMap);
+		 result.setValueMap(valueMap);
+		 result.setTime(et-st);
+		 return result;
 	}
+	
 	/**
 	 * 包装数据
 	 * @param searcher
@@ -210,7 +263,7 @@ public class LuceneSearchServiceImpl extends BaseSearchService{
 	 * @param clazz
 	 * @throws IOException
 	 */
-	public <T> void wrapData(IndexSearcher searcher,TopDocs results,SearchResult<T> searchResult,Class<T> clazz) throws IOException {
+	public <T> void wrapData(QueryScorer scorer,IndexSearcher searcher,TopDocs results,SearchResult<T> searchResult,Class<T> clazz) throws IOException {
 		/**创建Fragmenter*/  
         Fragmenter fragmenter = null;
         Highlighter highlight= null;
@@ -244,6 +297,41 @@ public class LuceneSearchServiceImpl extends BaseSearchService{
 		}
 		searchResult.setResult(searchList);
 		
+	}
+	public IndexSearcher createIndexSearch() throws CorruptIndexException,IOException {
+		if(indexSearcher==null){
+			indexSearcher = LuceneUtils.createIndexSearcher();
+		}
+		return indexSearcher;
+	}
+	protected IndexWriter createIndexWriter(OpenMode mode) throws Exception {
+		if(indexWriter==null){
+			indexWriter = LuceneUtils.createIndexWriter(mode);
+		}
+		return indexWriter;
+	}
+	protected void flushIndexWriter(){
+		if(this.indexWriter!=null){
+			try {
+				this.indexWriter.close();
+				this.indexWriter = null;
+			} catch (IOException e) {
+				log.error(e,e);
+			}
+		}
+	}
+	/**
+	 * 释放掉索引搜索器-当索引有更新时需要重新打开IndexReader
+	 */
+	protected void flushIndexSearch(){
+		try {
+			if(this.indexSearcher!=null){
+				this.indexSearcher.getIndexReader().close();
+				this.indexSearcher = null;
+			}
+		} catch (IOException e) {
+			log.error(e,e);
+		}
 	}
 
 	

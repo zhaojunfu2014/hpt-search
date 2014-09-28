@@ -6,8 +6,10 @@ import java.util.List;
 import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.Filter;
+import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Sort;
 
+import com.hpt.search.pojo.GroupResult;
 import com.hpt.search.pojo.SearchResult;
 
 /**
@@ -26,6 +28,7 @@ public interface SearchService {
 	 * @throws Exception 
 	 */
 	public <T> int createOrUpdateIndex(T t) throws Exception;
+	public <T> int createOrUpdateIndexBatch(List<T> t) throws Exception;
 	
 	/**
 	 * 删除索引
@@ -64,5 +67,16 @@ public interface SearchService {
 			int page, int pageSize) throws Exception;
 
 	
-	
+	public IndexSearcher createIndexSearch() throws CorruptIndexException, IOException;
+	/**
+	 * 分组统计
+	 * @param clazz
+	 * @param keywords
+	 * @param groupField
+	 * @param valueField
+	 * @param grouplimit
+	 * @return
+	 * @throws Exception
+	 */
+	public <T>  GroupResult group(Class<T> clazz,String keywords,String groupField,String valueField,int grouplimit) throws Exception;
 }

@@ -130,7 +130,9 @@ public class LuceneUtils {
 				continue;
 			}
 			String fieldName = f.getName();
+			Class fieldType = f.getType();
 			String fn= searchColum.name();
+			boolean ishighLight = searchColum.highLight();
 			String value = null;
 			if(fn==null||"".equals(fn)){
 				fn = fieldName;
@@ -143,11 +145,13 @@ public class LuceneUtils {
 			
 			try {
 				if(value!=null){
-					if(highlight!=null){
+					if(ishighLight==true&&highlight!=null&&fieldType==java.lang.String.class){
 						//高亮处理
 						TokenStream tokenStream = getAnalyzer().tokenStream(fn, new StringReader(value));
 						String highLightValue = highlight.getBestFragment(tokenStream, value); 
-						value = highLightValue;
+						if(highLightValue!=null){
+							value = highLightValue;
+						}
 					}
 					BeanUtils.setProperty(t, fieldName, value);
 				}

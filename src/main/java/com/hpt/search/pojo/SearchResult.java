@@ -11,7 +11,10 @@ import java.util.List;
  */
 public class SearchResult<T> {
 	private Long size;
+	private Long time;
 	private List<T> result = null;
+	
+	
 	public Long getSize() {
 		return size;
 	}
@@ -23,6 +26,12 @@ public class SearchResult<T> {
 	}
 	public void setResult(List<T> result) {
 		this.result = result;
+	}
+	public Long getTime() {
+		return time;
+	}
+	public void setTime(Long time) {
+		this.time = time;
 	}
 	
 	

@@ -2,6 +2,7 @@ package com.hpt.search;
 
 import java.util.ResourceBundle;
 
+import com.hpt.search.common.SearchGlobal;
 import com.hpt.search.service.SearchService;
 /**
  * 
@@ -17,7 +18,7 @@ public class HptSearcher {
 	private static String searcher = null;
 	static{
 		try{
-			bundle = java.util.ResourceBundle.getBundle("search");
+			bundle = java.util.ResourceBundle.getBundle(SearchGlobal.configFile);
 		}catch (Exception e) {
 			e.printStackTrace();
 		}

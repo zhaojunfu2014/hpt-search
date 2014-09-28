@@ -52,6 +52,7 @@ public class RedoJob extends TimerTask{
 		//将订阅到的日志重做
 		File subTodoDir = new File(logSubTodo);
 		File[] subTodos = subTodoDir.listFiles();
+		log.debug(subTodos.length+" logs");
 		if(subTodos == null || subTodos.length==0){
 			return;
 		}
@@ -64,5 +65,6 @@ public class RedoJob extends TimerTask{
 			}
 		}
 		moveFileToArchiver(subTodos);
+		log.debug(subTodos.length+" logs finished");
 	}
 }

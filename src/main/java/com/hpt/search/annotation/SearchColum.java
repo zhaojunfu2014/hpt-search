@@ -33,8 +33,15 @@ public @interface SearchColum {
 	 */
 	public boolean index() default false;
 	/**
+	 * 是否高亮
+	 * @return
+	 */
+	public boolean highLight() default false;
+	/**
 	 * 字段权重
 	 * @return
 	 */
 	public float boost() default 1;
+	
+	
 }

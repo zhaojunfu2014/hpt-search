@@ -23,11 +23,14 @@ public class JobRunner {
 	
 	private long periodPub;
 	private long periodRedo;
+	private long periodPubFromError;
 
 	//日志发布任务
 	private TimerTask pub = new PubJob();
 	//日志订阅任务
 	private TimerTask redo =  new RedoJob();
+	//错误日志重传任务
+	private TimerTask error = new ErrorJob();
 	
 	public JobRunner(){
 		loadCfg();
@@ -39,12 +42,15 @@ public class JobRunner {
 		bundle = java.util.ResourceBundle.getBundle(SearchGlobal.configFile);
 		String periodPubStr = bundle.getString("lucene.cluster.period.pub");
 		String periodRedoStr = bundle.getString("lucene.cluster.period.redo");
+		String periodPubFromErrorStr = bundle.getString("lucene.cluster.period.pubFromError");
 		periodPub = Long.parseLong(periodPubStr);
 		periodRedo = Long.parseLong(periodRedoStr);
+		periodPubFromError =  Long.parseLong(periodPubFromErrorStr);
 	}
 	public void run(){
 		Timer timer=new Timer();   
 		timer.schedule(pub,new Date(),periodPub);   
 		timer.schedule(redo,new Date(),periodRedo);   
+		timer.schedule(error, new Date(),periodPubFromError);
 	}
 }

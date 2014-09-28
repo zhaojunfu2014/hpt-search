@@ -16,10 +16,9 @@ import com.hpt.search.common.SearchGlobal;
 public class LuceneClusterServiceImpl extends LuceneSearchServiceImpl {
 	private static final Logger log= Logger.getLogger(LuceneClusterServiceImpl.class);
 	private String logbase = null;
-	private String me = null;
-	private String group = null;
 	private String logPub = null;
 	private String logPubTodo = null;
+	
 	public LuceneClusterServiceImpl() {
 		loadCfg();
 	}
@@ -33,8 +32,8 @@ public class LuceneClusterServiceImpl extends LuceneSearchServiceImpl {
 		logPubTodo = logPub+SearchGlobal.pathSeparator+SearchGlobal.logTodo;
 	}
 	
-	public <T> int createOrUpdateIndex(T t) throws Exception {
-		super.createOrUpdateIndex(t);
+	public <T> int createOrUpdateIndex(T t,boolean batch) throws Exception {
+		super.createOrUpdateIndex(t,batch);
 		//存入发布日志
 		log(t);
 		return 1;
@@ -44,7 +43,7 @@ public class LuceneClusterServiceImpl extends LuceneSearchServiceImpl {
 	
 	public <T> int deleteIndex(T t) throws Exception {
 		super.deleteIndex(t);
-		//存入发布日志
+		//存入发布日志,删除索引不推荐使用,集群环境不同步删除操作
 		//log(t);
 		return 1;
 	}

@@ -43,7 +43,14 @@ public class SolrSearchServiceImpl extends BaseSearchService {
 		HttpSolrServer server = getServer();
 		server.addBean(t);
 		server.commit();
-		return 0;
+		return 1;
+	}
+	@Override
+	public <T> int createOrUpdateIndexBatch(List<T> t) throws Exception {
+		for(T tt:t){
+			createOrUpdateIndex(tt);
+		}
+		return t.size();
 	}
 
 	@Override
@@ -55,7 +62,7 @@ public class SolrSearchServiceImpl extends BaseSearchService {
 		server.deleteById(value);
 		server.commit();
 
-		return 0;
+		return 1;
 	}
 
 	@Override
@@ -193,5 +200,7 @@ public class SolrSearchServiceImpl extends BaseSearchService {
 	public SolrSearchServiceImpl() {
 		this(SearchGlobal.configFile+".properties");
 	}
+
+	
 
 }
