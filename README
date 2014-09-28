@@ -7,7 +7,8 @@ hpt-search
 	>用hpt-search的服务接口操作实体,来实现索引的添加,修改,删除,检索
 	>支持高亮功能
 	>支持Lucene分页
-
+	>支持分组统计功能
+	
 2.集成solr
 	>对hpt-search的服务接口进行solr实现,lucene和solr的切换只需要改动配置文件
 
