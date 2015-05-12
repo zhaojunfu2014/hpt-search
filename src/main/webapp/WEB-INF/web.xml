@@ -4,4 +4,14 @@
 
 <web-app>
   <display-name>Archetype Created Web Application</display-name>
+  
+  <servlet>
+		<servlet-name>hptSearch</servlet-name>
+		<servlet-class>com.hpt.search.cluster.ClusterServlet</servlet-class>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>hptSearch</servlet-name>
+		<url-pattern>/manager</url-pattern>
+	</servlet-mapping>
 </web-app>

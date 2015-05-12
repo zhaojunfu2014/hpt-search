@@ -22,8 +22,8 @@ public class SearchTest {
 	@Test
 	public void create() {
 		for (int i = 0; i < 5; i++) {
-			SearchTestEntity t = new SearchTestEntity("赵大大力" + i,
-					"精通java编程以及切水果" + i, "赵大大力" + i);
+			SearchTestEntity t = new SearchTestEntity("赵俊夫" + i,
+					"谢谢谢谢" + i, "赵俊夫" + i);
 			try {
 				service.createOrUpdateIndex(t);
 			} catch (Exception e) {

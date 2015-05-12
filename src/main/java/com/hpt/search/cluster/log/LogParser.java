@@ -22,26 +22,31 @@ import com.hpt.search.common.SearchGlobal;
 public class LogParser {
 	
 	public static Object parseLog(String dir,String filename){
-		String[] p = filename.split("-");
-		String clazz = p[1].replace(Log.ext,"");
-		clazz = clazz.split("-")[0];
-		Class tc = null;
 		InputStream ips = null;
-		String data = null;
 		try {
+			String[] p = filename.split("-");
+			String clazz = p[1].replace(Log.ext,"");
+			clazz = clazz.split("-")[0];
+			Class tc = null;
+			String data = null;
 			tc = Class.forName(clazz);
 			ips = new FileInputStream(new File(dir+SearchGlobal.pathSeparator+filename));
-			data = IOUtils.toString(ips);
-			ips.close();
+			data = IOUtils.toString(ips,SearchGlobal.encode);
+			Object t =JSON.parseObject(data,tc);
+			return t;
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
+		}finally{
+			try {
+				ips.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
-		
-		Object t =JSON.parseObject(data,tc);
-		return t;
+		return null;
 	}
 }

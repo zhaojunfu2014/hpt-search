@@ -5,6 +5,10 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
+import java.io.Writer;
+import java.util.UUID;
 
 import com.alibaba.fastjson.JSON;
 import com.hpt.search.common.SearchGlobal;
@@ -25,30 +29,36 @@ public class LogCreator {
 	 * @return
 	 */
 	public static <T> Log createLog(T t){
-		long filename = System.currentTimeMillis();
+		String filename = UUID.randomUUID().toString().replace("-", "");
 		String data = JSON.toJSONString(t);
 		Log log = new Log(filename, data,t.getClass());
 		return log;
 	}
 	
 	public  static void saveToFile(Log log,String logPub){
-		OutputStream ops = null;
+		Writer ops = null;
 		String file =logPub+SearchGlobal.pathSeparator+log.getFilename()+"-"+log.getClazz()+log.ext;
 		try {
 			File f = new File(file);
 			if(!f.getParentFile().exists()){
 				f.getParentFile().mkdirs();
 			}
-			ops=new FileOutputStream(f);
+			FileOutputStream fos=new FileOutputStream(f);
+			ops = new OutputStreamWriter(fos, SearchGlobal.encode);
+			ops.write(log.getData());
 		} catch (FileNotFoundException e1) {
 			e1.printStackTrace();
-		}
-		try {
-			ops.write(log.getData().getBytes());
-			ops.flush();
-			ops.close();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
+		}finally{
+			try {
+				ops.flush();
+				ops.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 }

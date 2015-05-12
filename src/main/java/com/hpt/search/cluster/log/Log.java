@@ -11,14 +11,15 @@ package com.hpt.search.cluster.log;
  */
 public class Log {
 	public static String ext = ".log";
-	private long filename;
+	private String filename;
 	private String data;
 	private String clazz;
 	
-	public long getFilename() {
+	
+	public String getFilename() {
 		return filename;
 	}
-	public void setFilename(long filename) {
+	public void setFilename(String filename) {
 		this.filename = filename;
 	}
 	public String getData() {
@@ -37,7 +38,7 @@ public class Log {
 	
 	public Log() {
 	}
-	public Log(long filename, String data,Class clazz) {
+	public Log(String filename, String data,Class clazz) {
 		this.clazz = clazz.getName();
 		this.filename = filename;
 		this.data = data;

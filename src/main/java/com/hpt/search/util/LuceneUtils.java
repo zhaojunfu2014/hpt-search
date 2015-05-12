@@ -23,8 +23,10 @@ import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.highlight.Fragmenter;
 import org.apache.lucene.search.highlight.Highlighter;
 import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
+import org.apache.lucene.search.highlight.SimpleFragmenter;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
@@ -148,6 +150,8 @@ public class LuceneUtils {
 					if(ishighLight==true&&highlight!=null&&fieldType==java.lang.String.class){
 						//高亮处理
 						TokenStream tokenStream = getAnalyzer().tokenStream(fn, new StringReader(value));
+						Fragmenter fragmenter = new SimpleFragmenter(20000);
+						highlight.setTextFragmenter(fragmenter);
 						String highLightValue = highlight.getBestFragment(tokenStream, value); 
 						if(highLightValue!=null){
 							value = highLightValue;

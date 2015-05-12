@@ -8,6 +8,8 @@ import java.util.TimerTask;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 
+import com.hpt.search.ConfigHolder;
+import com.hpt.search.cluster.handler.LogSendHandler;
 import com.hpt.search.cluster.net.Client;
 import com.hpt.search.common.SearchGlobal;
 import com.hpt.search.util.FileUtil;
@@ -23,26 +25,9 @@ import com.hpt.search.util.FileUtil;
 public class ErrorJob extends TimerTask{
 	private static final Logger log= Logger.getLogger(ErrorJob.class);
 	
-	protected static ResourceBundle bundle = null;
-	private String logbase = null;
-	private String logPub = null;
-	private String logPubArchiver = null;
-	private String logPubError = null;
-	
-	public ErrorJob() {
-		loadCfg();
-	}
-	protected void loadCfg() {
-		bundle = java.util.ResourceBundle.getBundle(SearchGlobal.configFile);
-		logbase = bundle.getString("lucene.cluster.logbase")==null?"":bundle.getString("lucene.cluster.logbase");
-		logPub = logbase+SearchGlobal.pathSeparator+SearchGlobal.logPub;
-		logPubArchiver = logPub+SearchGlobal.pathSeparator+SearchGlobal.logArchiver;
-		logPubError = logPub+SearchGlobal.pathSeparator+SearchGlobal.logError;
-	}
-	
 	@Override
 	public synchronized void run() {
-		File errorTodoDir = new File(logPubError);
+		File errorTodoDir = new File(ConfigHolder.logPubError);
 		File[] errorTodos = errorTodoDir.listFiles();
 		log.debug(errorTodos.length+" logs");
 		for(File f:errorTodos){
@@ -55,16 +40,18 @@ public class ErrorJob extends TimerTask{
 			String portstr = ipport.split("_")[1];
 			//端口
 			int port = Integer.parseInt(portstr);
-			String pubFilename = fs[1]+fs[2]+".log";
+			String pubFilename = fs[1]+"-"+fs[2]+".log";
 			FileInputStream fips;
 			String data = null;
 			try {
 				fips = new FileInputStream(f);
 				data = IOUtils.toString(fips);
 				fips.close();
-				Client.send2Server(host, port,pubFilename , data);
-				FileUtil.cutGeneralFile(logPubError+SearchGlobal.pathSeparator+fnameext, logPubArchiver);
+//				Client.send2Server(host, port,pubFilename , data);
+				Client.sendData2Server(host, port, new LogSendHandler(pubFilename, data));
+				FileUtil.cutGeneralFile(ConfigHolder.logPubError+SearchGlobal.pathSeparator+fnameext, ConfigHolder.logPubArchiver);
 			} catch (Exception e) {
+				e.printStackTrace();
 				log.error(e,e);
 			}
 		}

@@ -7,7 +7,7 @@ import java.util.TimerTask;
 
 import org.apache.log4j.Logger;
 
-import com.hpt.search.common.SearchGlobal;
+import com.hpt.search.ConfigHolder;
 
 /**
  * 
@@ -21,36 +21,29 @@ public class JobRunner {
 	private static final Logger log= Logger.getLogger(JobRunner.class);
 	protected static ResourceBundle bundle = null;
 	
-	private long periodPub;
-	private long periodRedo;
-	private long periodPubFromError;
 
 	//日志发布任务
-	private TimerTask pub = new PubJob();
+	private TimerTask pub = null; 
 	//日志订阅任务
-	private TimerTask redo =  new RedoJob();
+	private TimerTask redo = null;
 	//错误日志重传任务
-	private TimerTask error = new ErrorJob();
+	private TimerTask error = null;
+	//心跳检测任务
+	private TimerTask heart = null;
 	
-	public JobRunner(){
-		loadCfg();
-	}
-	/**
-	 * 读取配置文件
-	 */
-	protected void loadCfg() {
-		bundle = java.util.ResourceBundle.getBundle(SearchGlobal.configFile);
-		String periodPubStr = bundle.getString("lucene.cluster.period.pub");
-		String periodRedoStr = bundle.getString("lucene.cluster.period.redo");
-		String periodPubFromErrorStr = bundle.getString("lucene.cluster.period.pubFromError");
-		periodPub = Long.parseLong(periodPubStr);
-		periodRedo = Long.parseLong(periodRedoStr);
-		periodPubFromError =  Long.parseLong(periodPubFromErrorStr);
-	}
 	public void run(){
 		Timer timer=new Timer();   
-		timer.schedule(pub,new Date(),periodPub);   
-		timer.schedule(redo,new Date(),periodRedo);   
-		timer.schedule(error, new Date(),periodPubFromError);
+		if("master".equals(ConfigHolder.mode)){
+			pub =new PubJob();
+			error = new ErrorJob();
+			heart= new HeartBeatJob();
+			
+			timer.schedule(pub,new Date(),ConfigHolder.periodPub);  
+			timer.schedule(error, new Date(),ConfigHolder.periodPubFromError);
+			timer.schedule(heart, new Date(),ConfigHolder.periodHeartBeat);
+		}else{
+			redo =  new RedoJob();
+			timer.schedule(redo,new Date(),ConfigHolder.periodRedo);  
+		}
 	}
 }

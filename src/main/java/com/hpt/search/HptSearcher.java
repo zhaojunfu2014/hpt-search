@@ -14,8 +14,9 @@ import com.hpt.search.service.SearchService;
  */
 public class HptSearcher {
 	private static ResourceBundle bundle = null;
-	private static SearchService searchService = null;
+	private static volatile SearchService searchService = null;
 	private static String searcher = null;
+	
 	static{
 		try{
 			bundle = java.util.ResourceBundle.getBundle(SearchGlobal.configFile);
@@ -25,23 +26,25 @@ public class HptSearcher {
 	}
 	
 	public static SearchService getService(){
-		if(searchService!=null){
-			return searchService;
-		}
-		searcher = bundle.getString("searcher");
-		if(searcher==null){
-			throw new RuntimeException("not found propertity named 'searcher' in search.properties");
-		}
-		Class clazz = null;;
-		try {
-			clazz = Class.forName(searcher);
-			searchService = (SearchService) clazz.newInstance();
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		} catch (InstantiationException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
+		if(searchService==null){
+			synchronized (HptSearcher.class) {
+				if(searchService !=null) return searchService;
+				searcher = bundle.getString("searcher");
+				if(searcher==null){
+					throw new RuntimeException("not found propertity named 'searcher' in search.properties");
+				}
+				Class clazz = null;;
+				try {
+					clazz = Class.forName(searcher);
+					searchService = (SearchService) clazz.newInstance();
+				} catch (ClassNotFoundException e) {
+					e.printStackTrace();
+				} catch (InstantiationException e) {
+					e.printStackTrace();
+				} catch (IllegalAccessException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 		return searchService;
 	}

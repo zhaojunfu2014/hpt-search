@@ -8,4 +8,5 @@ public class SearchGlobal {
 	public static final String logTodo="todo";
 	public static final String logArchiver="archiver";
 	public static final String logError="error";
+	public static final String encode = "GBK";
 }
